@@ -1,0 +1,107 @@
+Event:
+1、Event相关方法：
+1）CreateEvent() 创建事件对象
+2）OpenEvent() 获得该句柄
+3）CloseHandle() 关闭句柄
+4）SetEvent() 设置信号
+5）PulseEvent() 重置信号-设置信号-重置信号，使信号状态发生一次脉冲变化
+6）ResetEvent() 重置信号
+7）WaitForSingleObject 等待信号
+8）WaitForMultipleObjects 等待多个信号
+2、注意事项：
+1）自动重置: 调用SetEvent, 唤醒一个事件后，事件自动重置为未触发状态；
+2）手动重置：调用SetEvent，所有等待者都变为可调度状态（即使调用SetEvent后立马调用ResetEvent也会触发所有正在等待者-vs2019验证过），事件需要ResetEvent才能重置为未
+   触发状态.
+3）自动重置：调用PulseEvent，有等待者，则唤醒一个等待者后，变为未触发状态，如果没有等待者，直接变为未触发状态；
+4）手动重置：调用PulseEvent，有等待者，则唤醒一个等待者后，变为未触发状态，如果没有等待者，直接变为未触发状态；
+5）可以跨进程.
+-----------------------------------------------------
+// ConsoleApplication1.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+//
+#include <iostream>
+#include<string>
+#include <algorithm>
+#include <vector>
+#include <thread>
+#include <iostream>
+#include <stdio.h>
+#include <windows.h>
+
+#pragma warning(disable:4996)
+using namespace std;
+void EventTestThread(HANDLE* h, int32_t id)
+{
+    Sleep(50);
+    //printf("%s->%d:into thread[%d]....\n", FILE, LINE, id);
+    WaitForSingleObject(*h, INFINITE);
+    printf("%s->%d:exit thread[%d]....\n", FILE, LINE, id);
+}
+void EventTestThread2(HANDLE* h)
+{
+    Sleep(50);
+    printf("%s->%d:into thread2....\n", FILE, LINE);
+    WaitForSingleObject(*h, INFINITE);
+    printf("%s->%d:exit thread2....\n", FILE, LINE);
+}
+#define THREAD_CNT 10000
+int main()
+{
+    HANDLE hEvent =CreateEvent(NULL     /安全属性指针/
+                            , true      /复位方式/
+                            , false     /初始化状态/
+                            , NULL      /事件名称/
+                            );
+    if (NULL == hEvent)
+    {
+        return 0;
+    }
+    /* 提前触发成有信号 */
+    #if 0
+    SetEvent(hEvent);
+    //PulseEvent(hEvent);
+    Sleep(2 * 1000);
+    #endif
+    /* 创建等待时间信号线程 */
+    printf("%s->%d:start create thread....\n", __FILE__, __LINE__);
+    for (int32_t i = 0; i < THREAD_CNT; i++) 
+    {
+        szThread[i] = thread(EventTestThread, &hEvent, i);
+    }
+
+    #if 0
+    printf("%s->%d:start Sleep...\n", FILE, LINE);
+    Sleep(5 * 1000);
+    printf("%s->%d:end Sleep....\n", FILE, LINE);
+    //SetEvent(hEvent);
+    PulseEvent(hEvent);
+    #endif
+    thread hEventTestThread2(EventTestThread2, &hEvent);
+    Sleep(1000);
+    printf("%s->%d:ResetEvent....\n", FILE, LINE);
+    SetEvent(hEvent);
+    ResetEvent(hEvent);/*即使立马调勇ResetEvent也会唤醒所有已经等待的实践*/
+    /* 提前触发成有信号 */
+    #if 0
+    printf("%s->%d:start Sleep...\n", FILE, LINE);
+    Sleep(5 * 1000);
+    printf("%s->%d:end Sleep....\n", FILE, LINE);
+    //SetEvent(hEvent);
+    PulseEvent(hEvent);
+    #endif
+    for (int32_t i = 0; i < THREAD_CNT; i++)
+    {
+        szThread[i].join();
+    }
+    hEventTestThread2.join();
+    printf("%s->%d:exit main....\n", FILE, LINE);
+}
+// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
+// 调试程序: F5 或调试 >“开始调试”菜单
+// 入门使用技巧:
+//   1. 使用解决方案资源管理器窗口添加/管理文件
+//   2. 使用团队资源管理器窗口连接到源代码管理
+//   3. 使用输出窗口查看生成输出和其他消息
+//   4. 使用错误列表窗口查看错误
+//   5. 转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
+//   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
+------------------------------------------------------

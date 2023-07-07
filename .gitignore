@@ -1,0 +1,13 @@
+*.obj
+*.log
+*.lastbuildstate
+dscambase.tlog/
+Release/
+Debug/
+*.opensdf
+*.sdf
+*.suo
+*.pdb
+ipch/
+build/
+
